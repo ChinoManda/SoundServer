@@ -8,13 +8,19 @@ import (
 	"encoding/binary"
 	"log"
 	"io"
+	"strings"
 )
 
-const(
-	FLAG_SYNC = 1 << 1 
-	FLAG_ACK	= 1 << 4
-)
 
+const (
+	FlagACK    = 1 << 0 // 00000001
+	FlagSYNC   = 1 << 1 // 00000010
+	FlagAUDIO  = 1 << 2 // 00000100
+	FlagSTOP   = 1 << 3 // 00001000
+	FlagMETA   = 1 << 4 // 00010000
+	FlagCONFIG = 1 << 5 // 00100000
+	FlagCHOICE = 1 << 6 // 01000000
+)
 
 type Packet struct {
     Seq   uint32
@@ -50,6 +56,54 @@ func DeserializePacket(buf []byte) Packet {
     }
 }
 
+
+func grabSong(song string) []byte {
+	
+song = strings.TrimRight(song, "\x00")
+file, err := os.Open("music/" + song)
+if err != nil {
+	fmt.Println("error: ", song)
+	log.Fatal(err)
+}
+defer file.Close()
+pcmData, err := io.ReadAll(file)
+if err != nil {
+	log.Fatal(err)
+}
+return pcmData
+}
+
+func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
+	
+		seq := 0
+		for i := 0; i < len(pcmData); i += 1024{
+			end := i + 1024
+			if end > len(pcmData){
+				end = len(pcmData)
+			}
+      chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmData[i:end])
+			conn.WriteToUDP(chunk, clientAddr)
+			fmt.Println("Enviando",  i, " , ", end)
+			seq += 1024
+
+	    //esperar ack
+			fmt.Println("esperando ACK")
+			ackBuf := make([]byte, 1024)
+			conn.Read(ackBuf)
+			ackPacket := DeserializePacket(ackBuf)
+
+			if ackPacket.Ack == 0 {
+				fmt.Println("ack no llegó, cortando conexion")
+				break
+			}
+			fmt.Println("ack crrecto", ackPacket.Ack)
+			
+		}
+
+   conn.WriteToUDP([]byte("END"), clientAddr)
+   fmt.Println("Enviado!")
+	
+}
 func main()  {
 	addr := net.UDPAddr{
 		Port:9000,
@@ -71,59 +125,17 @@ func main()  {
 			fmt.Println("Error al leer:", err)
 			continue
 		}
+    Packet := DeserializePacket(buffer)
+		
+    switch  {
+    case Packet.Flags&FlagCHOICE != 0 :	
+		pcmData := grabSong(string(Packet.Data))
+		sendSong(pcmData, conn, clientAddr)
+		fmt.Println("Tengo cancion nashe")
+    }
 
-		msg := string(buffer[:n])
-		fmt.Println("Cliente pidio:", msg)
-
-file, err := os.Open("NoMoreTears.pcm")
-if err != nil {
-	log.Fatal(err)
-}
-defer file.Close()
-pcmData, err := io.ReadAll(file)
-if err != nil {
-	log.Fatal(err)
-}
-//decoder, err := mp3.NewDecoder(f)
-//fmt.Println(decoder.SampleRate())
-
-if err != nil {
-	log.Fatal(err)
-}
-
-//pcmData, err := io.ReadAll(decoder)
-if err != nil {
-	log.Fatal(err)
+    
+ }
 }
 
 
-		seq := 0
-		for i := 0; i < len(pcmData); i += 1024{
-			end := i + 1024
-			if end > len(pcmData){
-				end = len(pcmData)
-			}
-      chunk := createPacket(uint32(seq), 0, 0, pcmData[i:end])
-			conn.WriteToUDP(chunk, clientAddr)
-			fmt.Println("Enviando",  i, " , ", end)
-			seq += 1024
-
-	    //esperar ack
-			fmt.Println("esperando ACK")
-			ackBuf := make([]byte, 1024)
-			conn.Read(ackBuf)
-			ackPacket := DeserializePacket(ackBuf)
-
-			if ackPacket.Ack == 0 {
-				fmt.Println("ack no llegó, cortando conexion")
-				break
-			}
-			fmt.Println("ack crrecto", ackPacket.Ack)
-			
-		}
-
-   conn.WriteToUDP([]byte("END"), clientAddr)
-   fmt.Println("Enviado!")
-	}
-	fmt.Println("termino")
-}
