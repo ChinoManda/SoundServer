@@ -21,6 +21,7 @@ const (
 	FlagMETA   = 1 << 4 // 00010000
 	FlagCONFIG = 1 << 5 // 00100000
 	FlagCHOICE = 1 << 6 // 01000000
+	FlagSONGS  = 1 << 7 // 10000000
 
 
 	maxRetries = 5
@@ -78,7 +79,7 @@ func handShake(conn *net.UDPConn, Packet Packet, clientAddr *net.UDPAddr) bool {
 func grabSong(song string) []byte {
 	
 song = strings.TrimRight(song, "\x00")
-file, err := os.Open("music/" + song)
+file, err := os.Open("music/" + song + ".pcm")
 if err != nil {
 	fmt.Println("error: ", song)
 	log.Fatal(err)
@@ -181,9 +182,28 @@ func main()  {
    } else {
 		 fmt.Println("handShake incorrecto")
 	 }
+	  case Packet.Flags&FlagSONGS != 0 :
+			sendChoices(conn, clientAddr)
     }
+		
 
  }
+}
+
+func sendChoices(conn *net.UDPConn, clientAddr *net.UDPAddr){
+	  entries, err := os.ReadDir("./music/")
+    if err != nil {
+        log.Fatal(err)
+    }
+ 
+    for _, e := range entries {
+    song, _, _ := strings.Cut(e.Name(), ".")
+		PacketSong := createPacket(0,0,FlagSONGS, []byte(song))
+		conn.WriteToUDP(PacketSong, clientAddr)
+    }
+		PacketEND := createPacket(0,0,FlagSTOP,nil)
+		conn.WriteToUDP(PacketEND, clientAddr)
+
 }
 
 
