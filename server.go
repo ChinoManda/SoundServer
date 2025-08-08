@@ -140,9 +140,9 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 		}
 			
 		}
-
-   conn.WriteToUDP([]byte("END"), clientAddr)
-   fmt.Println("Enviado!")
+		PacketEnd := createPacket(0,0,FlagSTOP, nil)
+   conn.WriteToUDP(PacketEnd, clientAddr)
+   fmt.Println("Terminado!")
 	
 }
 func main()  {
@@ -188,6 +188,7 @@ func main()  {
 		
 
  }
+
 }
 
 func sendChoices(conn *net.UDPConn, clientAddr *net.UDPAddr){
