@@ -9,6 +9,7 @@ import (
 	"log"
 	"io"
 	"strings"
+	"time"
 )
 
 
@@ -20,6 +21,10 @@ const (
 	FlagMETA   = 1 << 4 // 00010000
 	FlagCONFIG = 1 << 5 // 00100000
 	FlagCHOICE = 1 << 6 // 01000000
+
+
+	maxRetries = 5
+
 )
 
 type Packet struct {
@@ -36,7 +41,7 @@ func createPacket(seq uint32, ack uint32, flags byte, payload []byte) []byte  {
 	binary.Write(buf, binary.BigEndian, seq)
 	binary.Write(buf, binary.BigEndian, ack)
 
-	buf.WriteByte(flags)
+buf.WriteByte(flags)
 	buf.Write(payload)
 
 	return buf.Bytes()
@@ -56,6 +61,19 @@ func DeserializePacket(buf []byte) Packet {
     }
 }
 
+func handShake(conn *net.UDPConn, Packet Packet, clientAddr *net.UDPAddr) bool {
+	seq := uint32(2000)
+	clientAck := Packet.Ack
+	handShakePacket := createPacket(seq, Packet.Ack+1, FlagSYNC | FlagACK, nil)
+	conn.WriteToUDP(handShakePacket, clientAddr)
+  buffer := make([]byte, 1024)
+  conn.Read(buffer)
+  response := DeserializePacket(buffer)
+  if response.Seq == clientAck+1 && response.Ack == seq+1 {
+  	return true
+  }
+	return false
+}
 
 func grabSong(song string) []byte {
 	
@@ -81,22 +99,44 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 			if end > len(pcmData){
 				end = len(pcmData)
 			}
-      chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmData[i:end])
+			pcmDataChunk := pcmData[i:end]
+      chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmDataChunk)
 			conn.WriteToUDP(chunk, clientAddr)
 			fmt.Println("Enviando",  i, " , ", end)
-			seq += 1024
-
 	    //esperar ack
 			fmt.Println("esperando ACK")
-			ackBuf := make([]byte, 1024)
-			conn.Read(ackBuf)
-			ackPacket := DeserializePacket(ackBuf)
 
-			if ackPacket.Ack == 0 {
-				fmt.Println("ack no llegó, cortando conexion")
+			retries := 0 
+			ackReceived := false 
+			for retries < maxRetries{
+				conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			    ackBuf := make([]byte, 1024)
+					_, err :=	conn.Read(ackBuf)
+   	    if err != nil {
+				// Timeout o error
+				fmt.Println("ACK no recibido, reenviando paquete...")
+				conn.WriteToUDP(chunk, clientAddr)
+				retries++
+				continue
+				}
+
+		    ackPacket := DeserializePacket(ackBuf)
+				if ackPacket.Ack == uint32(seq)+uint32(len(pcmDataChunk)) {
+				fmt.Println("ACK recibido correctamente:", ackPacket.Ack)
+				ackReceived = true
 				break
+					} else {
+						fmt.Println("ACK incorrecto:", ackPacket.Ack, "esperado:", uint32(seq)+uint32(len(pcmDataChunk)))
+						conn.WriteToUDP(chunk, clientAddr)
+						retries++
+						}
 			}
-			fmt.Println("ack crrecto", ackPacket.Ack)
+   
+			seq += 1024
+	if !ackReceived {
+		fmt.Println("No se recibió ACK después de varios intentos, cerrando conexión.")
+		break
+		}
 			
 		}
 
@@ -128,13 +168,21 @@ func main()  {
     Packet := DeserializePacket(buffer)
 		
     switch  {
-    case Packet.Flags&FlagCHOICE != 0 :	
+    case Packet.Flags&FlagCHOICE != 0 :
+		fmt.Println("FlagCHOICE")
 		pcmData := grabSong(string(Packet.Data))
 		sendSong(pcmData, conn, clientAddr)
 		fmt.Println("Tengo cancion nashe")
+	  case Packet.Flags&FlagSYNC != 0 :
+			fmt.Println("FlagSYNC")
+			success := handShake(conn, Packet, clientAddr)	
+   if success {
+   	fmt.Println("handShake correcto!")
+   } else {
+		 fmt.Println("handShake incorrecto")
+	 }
     }
 
-    
  }
 }
 
