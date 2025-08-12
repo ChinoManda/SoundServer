@@ -23,9 +23,8 @@ const (
 	FlagCHOICE = 1 << 6 // 01000000
 	FlagSONGS  = 1 << 7 // 10000000
 
-
 	maxRetries = 5
-
+  PacketSize = 4096
 )
 
 type Packet struct {
@@ -95,18 +94,20 @@ return pcmData
 func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 	
 		seq := 0
-		for i := 0; i < len(pcmData); i += 1024{
-			end := i + 1024
+		bytesEnviados := 0
+		for i := 0; i < len(pcmData); i += PacketSize{
+			end := i + PacketSize
 			if end > len(pcmData){
 				end = len(pcmData)
 			}
+    
 			pcmDataChunk := pcmData[i:end]
       chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmDataChunk)
 			conn.WriteToUDP(chunk, clientAddr)
 			fmt.Println("Enviando",  i, " , ", end)
+			bytesEnviados += PacketSize
+			fmt.Println("Porcentaje: ", float64(bytesEnviados) / float64(len(pcmData)) * 100)
 	    //esperar ack
-			fmt.Println("esperando ACK")
-
 			retries := 0 
 			ackReceived := false 
 			for retries < maxRetries{
@@ -123,7 +124,6 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 
 		    ackPacket := DeserializePacket(ackBuf)
 				if ackPacket.Ack == uint32(seq)+uint32(len(pcmDataChunk)) {
-				fmt.Println("ACK recibido correctamente:", ackPacket.Ack)
 				ackReceived = true
 				break
 					} else {
@@ -133,7 +133,7 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 						}
 			}
    
-			seq += 1024
+			seq += PacketSize
 	if !ackReceived {
 		fmt.Println("No se recibió ACK después de varios intentos, cerrando conexión.")
 		break
