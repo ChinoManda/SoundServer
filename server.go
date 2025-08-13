@@ -179,7 +179,7 @@ func sendSongNOAck(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr) {
 func main()  {
 	addr := net.UDPAddr{
 		Port:9000,
-		IP: net.ParseIP("127.0.0.1"),
+		IP: net.IPv4zero,
 	}
 
 	conn, err := net.ListenUDP("udp", &addr)
