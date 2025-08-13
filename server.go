@@ -24,7 +24,7 @@ const (
 	FlagSONGS  = 1 << 7 // 10000000
 
 	maxRetries = 5
-  PacketSize = 2048
+  PacketSize = 1024
 )
 
 type Packet struct {
