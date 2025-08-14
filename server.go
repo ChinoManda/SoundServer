@@ -37,7 +37,8 @@ type Packet struct {
 type Client struct {
 	Conn *net.UDPConn
 	ClientAddr *net.UDPAddr
-	Ch chan []byte
+	Ch 			chan []byte
+  AckCh 	chan Packet
 }
 
 var clients = make(map[string]*Client)
@@ -101,7 +102,7 @@ if err != nil {
 return pcmData
 }
 
-func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
+func sendSong(pcmData []byte, client *Client)  {
 	
 		seq := 0
 		bytesEnviados := 0
@@ -113,7 +114,7 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
     
 			pcmDataChunk := pcmData[i:end]
       chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmDataChunk)
-			conn.WriteToUDP(chunk, clientAddr)
+			client.Conn.WriteToUDP(chunk, client.ClientAddr)
 			fmt.Println("Enviando",  i, " , ", end)
 			bytesEnviados += PacketSize
 			fmt.Println("Porcentaje: ", float64(bytesEnviados) / float64(len(pcmData)) * 100)
@@ -123,12 +124,12 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 			for retries < maxRetries{
       select {
 			case ack := <-client.AckCh:
-				if ackPacket.Ack == uint32(seq)+uint32(len(pcmDataChunk)) {
+				if ack.Ack == uint32(seq)+uint32(len(pcmDataChunk)) {
 				ackReceived = true
 				break 
 					} else {
-						fmt.Println("ACK incorrecto:", ackPacket.Ack, "esperado:", uint32(seq)+uint32(len(pcmDataChunk)))
-						conn.WriteToUDP(chunk, clientAddr)
+						fmt.Println("ACK incorrecto:", ack.Ack, "esperado:", uint32(seq)+uint32(len(pcmDataChunk)))
+						client.Conn.WriteToUDP(chunk, client.ClientAddr)
 						retries++
 						}
 
@@ -149,9 +150,9 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 			
 		}
 		PacketEnd := createPacket(0,0,FlagSTOP, nil)
-   conn.WriteToUDP(PacketEnd, clientAddr)
-   fmt.Println("Terminado!")
-	
+   client.Conn.WriteToUDP(PacketEnd, client.ClientAddr)
+   fmt.Println("Terminado!")	
+ }
 }
 func sendSongNOAck(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr) {
 	
@@ -199,7 +200,7 @@ func main()  {
    key := clientAddr.String()
 	 if client, exists := clients[key]; exists{
 		  pkt := DeserializePacket(buffer[:n])
-			if pkt.Flags&FlagACK != {
+			if pkt.Flags&FlagACK != 0 {
 				client.AckCh <- pkt
 			} else {
 			chunk := make([]byte, n)
@@ -235,7 +236,7 @@ func handleClient(client *Client)  {
     case Pkt.Flags&FlagCHOICE != 0 :
 		fmt.Println("FlagCHOICE")
 		pcmData := grabSong(string(Pkt.Data))
-		sendSongNOAck(pcmData, client.Conn, client.ClientAddr)
+		sendSong(pcmData, client)
 	  case Pkt.Flags&FlagSYNC != 0 :
 			fmt.Println("FlagSYNC")
 			success := handShake(client.Conn, Pkt, client.ClientAddr)	
