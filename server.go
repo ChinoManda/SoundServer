@@ -168,9 +168,9 @@ func sendSongNOAck(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr) {
 			pcmDataChunk := pcmData[i:end]
       chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmDataChunk)
 			conn.WriteToUDP(chunk, clientAddr)
-			fmt.Println("Enviando",  i, " , ", end)
+		//	fmt.Println("Enviando",  i, " , ", end)
 			bytesEnviados += PacketSize
-			fmt.Println("Porcentaje: ", float64(bytesEnviados) / float64(len(pcmData)) * 100)
+		//	fmt.Println("Porcentaje: ", float64(bytesEnviados) / float64(len(pcmData)) * 100)
 		}
 		PacketEnd := createPacket(0,0,FlagSTOP, nil)
    conn.WriteToUDP(PacketEnd, clientAddr)
