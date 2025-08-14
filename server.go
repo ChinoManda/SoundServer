@@ -24,7 +24,7 @@ const (
 	FlagSONGS  = 1 << 7 // 10000000
 
 	maxRetries = 5
-  PacketSize = 2048
+  PacketSize = 1024
 )
 
 type Packet struct {
@@ -179,7 +179,7 @@ func sendSongNOAck(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr) {
 func main()  {
 	addr := net.UDPAddr{
 		Port:9000,
-		IP: net.ParseIP("127.0.0.1"),
+		IP: net.IPv4zero,
 	}
 
 	conn, err := net.ListenUDP("udp", &addr)
@@ -230,7 +230,7 @@ func handleClient(client *Client)  {
     case Pkt.Flags&FlagCHOICE != 0 :
 		fmt.Println("FlagCHOICE")
 		pcmData := grabSong(string(Pkt.Data))
-		sendSongNOAck(pcmData, client.Conn, client.ClientAddr)
+		sendSong(pcmData, client.Conn, client.ClientAddr)
 	  case Pkt.Flags&FlagSYNC != 0 :
 			fmt.Println("FlagSYNC")
 			success := handShake(client.Conn, Pkt, client.ClientAddr)	
