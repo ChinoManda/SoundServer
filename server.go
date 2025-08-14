@@ -230,7 +230,7 @@ func handleClient(client *Client)  {
     case Pkt.Flags&FlagCHOICE != 0 :
 		fmt.Println("FlagCHOICE")
 		pcmData := grabSong(string(Pkt.Data))
-		sendSong(pcmData, client.Conn, client.ClientAddr)
+		sendSongNOAck(pcmData, client.Conn, client.ClientAddr)
 	  case Pkt.Flags&FlagSYNC != 0 :
 			fmt.Println("FlagSYNC")
 			success := handShake(client.Conn, Pkt, client.ClientAddr)	
