@@ -133,8 +133,8 @@ func sendSong(pcmData []byte, client *Client)  {
 						retries++
 						}
 
-		  case <-time.After(1 * time.Second):
-              fmt.Println("Timeout, reenviando paquete...")
+		  case <-time.After(4 * time.Second):
+              fmt.Println("Timeout, reenviando paquete..." retries)
               retries++
             
 			}
