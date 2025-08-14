@@ -225,7 +225,7 @@ func handleClient(client *Client)  {
 		for data := range client.Ch{
 		fmt.Println("clienteee")
      Pkt := DeserializePacket(data)
-
+    fmt.Println(Pkt.Flags)
     switch  {
     case Pkt.Flags&FlagCHOICE != 0 :
 		fmt.Println("FlagCHOICE")
