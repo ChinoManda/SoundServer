@@ -213,7 +213,7 @@ func main()  {
         handleClient(clients[key])
 				copyData := make([]byte, n)
 				copy(copyData, buffer[:n])
-				client.Ch <- copyData
+				clients[key].Ch <- copyData
 	 }
  }
 }
