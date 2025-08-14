@@ -121,29 +121,27 @@ func sendSong(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr)  {
 			retries := 0 
 			ackReceived := false 
 			for retries < maxRetries{
-				conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			    ackBuf := make([]byte, 1024)
-					_, err :=	conn.Read(ackBuf)
-   	    if err != nil {
-				// Timeout o error
-				fmt.Println("ACK no recibido, reenviando paquete...")
-				conn.WriteToUDP(chunk, clientAddr)
-				retries++
-				continue
-				}
-
-		    ackPacket := DeserializePacket(ackBuf)
+      select {
+			case ack := <-client.AckCh:
 				if ackPacket.Ack == uint32(seq)+uint32(len(pcmDataChunk)) {
 				ackReceived = true
-				break
+				break 
 					} else {
 						fmt.Println("ACK incorrecto:", ackPacket.Ack, "esperado:", uint32(seq)+uint32(len(pcmDataChunk)))
 						conn.WriteToUDP(chunk, clientAddr)
 						retries++
 						}
+
+		  case <-time.After(1 * time.Second):
+              fmt.Println("Timeout, reenviando paquete...")
+              retries++
+            
 			}
-   
+   		
 			seq += PacketSize
+	if ackReceived {
+		break
+		}
 	if !ackReceived {
 		fmt.Println("No se recibió ACK después de varios intentos, cerrando conexión.")
 		break
@@ -200,9 +198,14 @@ func main()  {
 
    key := clientAddr.String()
 	 if client, exists := clients[key]; exists{
+		  pkt := DeserializePacket(buffer[:n])
+			if pkt.Flags&FlagACK != {
+				client.AckCh <- pkt
+			} else {
 			chunk := make([]byte, n)
 			copy(chunk, buffer[:n])
 			client.Ch <- chunk
+		  } 
 	 } else {
 			clients[key] = &Client{
             Conn: conn,
