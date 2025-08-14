@@ -261,7 +261,10 @@ func sendChoices(conn *net.UDPConn, clientAddr *net.UDPAddr){
     for _, e := range entries {
     song, _, _ := strings.Cut(e.Name(), ".")
 		PacketSong := createPacket(0,0,FlagSONGS, []byte(song))
-		conn.WriteToUDP(PacketSong, clientAddr)
+		_, err := conn.WriteToUDP(PacketSong, clientAddr)
+			if err != nil {
+		panic(err)
+	}
     }
 		PacketEND := createPacket(0,0,FlagSTOP,nil)
 		conn.WriteToUDP(PacketEND, clientAddr)
