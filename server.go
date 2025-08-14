@@ -211,7 +211,9 @@ func main()  {
         }
 				fmt.Println("Cliente agregado")
         handleClient(clients[key])
-				clients[key].Ch <- buffer[:n]
+				copyData := make([]byte, n)
+				copy(copyData, buffer[:n])
+				client.Ch <- copyData
 	 }
  }
 }
