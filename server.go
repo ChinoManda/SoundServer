@@ -214,7 +214,7 @@ func main()  {
             Conn: conn,
 						ClientAddr: clientAddr,
             Ch:   make(chan []byte),
-						AckCh: make(chan Packet, 10),
+						AckCh: make(chan Packet),
         }
 				fmt.Println("Cliente agregado")
         handleClient(clients[key])
