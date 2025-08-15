@@ -79,7 +79,7 @@ func handShake(conn *net.UDPConn, Packet Packet, clientAddr *net.UDPAddr) bool {
 	fmt.Println("Bb")
   conn.Read(buffer)
   response := DeserializePacket(buffer)
-	fmt.Println("aa")
+	fmt.Println(response.Seq, response.Ack, clientAck, seq)
   if response.Seq == clientAck+1 && response.Ack == seq+1 {
   	return true
   }
@@ -124,8 +124,10 @@ func sendSong(pcmData []byte, client *Client)  {
 			for retries < maxRetries{
       select {
 			case ack := <-client.AckCh:
+				fmt.Println("Escuchamos y juzgamos")
 				if ack.Ack == uint32(seq)+uint32(len(pcmDataChunk)) {
 				ackReceived = true
+				fmt.Println("Trueeeeeeeee")
 				break 
 					} else {
 						fmt.Println("ACK incorrecto:", ack.Ack, "esperado:", uint32(seq)+uint32(len(pcmDataChunk)))
@@ -138,21 +140,20 @@ func sendSong(pcmData []byte, client *Client)  {
               retries++
             
 			}
-   		
-			seq += PacketSize
+
 	if ackReceived {
 		break
 		}
+		}
+	seq += PacketSize
 	if !ackReceived {
 		fmt.Println("No se recibió ACK después de varios intentos, cerrando conexión.")
 		break
-		}
-			
-		}
+		}		
+ }
 		PacketEnd := createPacket(0,0,FlagSTOP, nil)
    client.Conn.WriteToUDP(PacketEnd, client.ClientAddr)
    fmt.Println("Terminado!")	
- }
 }
 func sendSongNOAck(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr) {
 	
@@ -200,7 +201,8 @@ func main()  {
    key := clientAddr.String()
 	 if client, exists := clients[key]; exists{
 		  pkt := DeserializePacket(buffer[:n])
-			if pkt.Flags&FlagACK != 0 {
+			if pkt.Flags&FlagACK != 0 && pkt.Seq == 0 {
+				fmt.Println("CLiente existe y flag ack")
 				client.AckCh <- pkt
 			} else {
 			chunk := make([]byte, n)
@@ -212,6 +214,7 @@ func main()  {
             Conn: conn,
 						ClientAddr: clientAddr,
             Ch:   make(chan []byte),
+						AckCh: make(chan Packet, 1),
         }
 				fmt.Println("Cliente agregado")
         handleClient(clients[key])
