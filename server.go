@@ -76,11 +76,16 @@ func handShake(conn *net.UDPConn, Packet Packet, clientAddr *net.UDPAddr) bool {
 	handShakePacket := createPacket(seq, Packet.Ack+1, FlagSYNC | FlagACK, nil)
 	conn.WriteToUDP(handShakePacket, clientAddr)
   buffer := make([]byte, 1024)
-  conn.Read(buffer)
-  response := DeserializePacket(buffer)
+	n, _ := conn.Read(buffer)
+	response := DeserializePacket(buffer[:n])
   if response.Seq == clientAck+1 && response.Ack == seq+1 {
+		handShakeEndPacket := createPacket(0, 0, FlagACK, nil)
+		conn.WriteToUDP(handShakeEndPacket, clientAddr)
   	return true
+
   }
+	handShakeEndPacket := createPacket(0, 0, FlagSYNC, nil)
+  conn.WriteToUDP(handShakeEndPacket, clientAddr)
 	return false
 }
 
