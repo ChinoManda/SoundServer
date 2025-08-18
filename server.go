@@ -50,7 +50,7 @@ func createPacket(seq uint32, ack uint32, flags byte, payload []byte) []byte  {
 	binary.Write(buf, binary.BigEndian, seq)
 	binary.Write(buf, binary.BigEndian, ack)
 
-buf.WriteByte(flags)
+  buf.WriteByte(flags)
 	buf.Write(payload)
 
 	return buf.Bytes()
@@ -89,8 +89,7 @@ func handShake(conn *net.UDPConn, Packet Packet, clientAddr *net.UDPAddr) bool {
 	return false
 }
 
-func grabSong(song string) []byte {
-	
+func grabSong(song string) []byte {	
 song = strings.TrimRight(song, "\x00")
 file, err := os.Open("music/" + song + ".pcm")
 if err != nil {
@@ -106,7 +105,6 @@ return pcmData
 }
 
 func sendSong(pcmData []byte, client *Client)  {
-	
 		seq := 0
 		bytesEnviados := 0
 		for i := 0; i < len(pcmData); i += PacketSize{
@@ -137,46 +135,26 @@ func sendSong(pcmData []byte, client *Client)  {
 
 		  case <-time.After(4 * time.Second):
               fmt.Println("Timeout, reenviando paquete...", retries)
-						client.Conn.WriteToUDP(chunk, client.ClientAddr)
+							client.Conn.WriteToUDP(chunk, client.ClientAddr)
               retries++
             
 			}
 
-	if ackReceived {
-		break
-		}
-		}
+  		if ackReceived 
+			break
+			}
+	  }
 	seq += PacketSize
 	if !ackReceived {
 		fmt.Println("No se recibió ACK después de varios intentos, cerrando conexión.")
 		break
 		}		
  }
-		PacketEnd := createPacket(0,0,FlagSTOP, nil)
-   client.Conn.WriteToUDP(PacketEnd, client.ClientAddr)
-   fmt.Println("Terminado!")	
+	PacketEnd := createPacket(0,0,FlagSTOP, nil)
+  client.Conn.WriteToUDP(PacketEnd, client.ClientAddr)
+  fmt.Println("Terminado!")	
 }
-func sendSongNOAck(pcmData []byte, conn *net.UDPConn, clientAddr *net.UDPAddr) {
-	
-		seq := 0
-		bytesEnviados := 0
-		for i := 0; i < len(pcmData); i += PacketSize{
-			end := i + PacketSize
-			if end > len(pcmData){
-				end = len(pcmData)
-			}
-    
-			pcmDataChunk := pcmData[i:end]
-      chunk := createPacket(uint32(seq), 0, FlagAUDIO, pcmDataChunk)
-			conn.WriteToUDP(chunk, clientAddr)
-		//	fmt.Println("Enviando",  i, " , ", end)
-			bytesEnviados += PacketSize
-		//	fmt.Println("Porcentaje: ", float64(bytesEnviados) / float64(len(pcmData)) * 100)
-		}
-		PacketEnd := createPacket(0,0,FlagSTOP, nil)
-   conn.WriteToUDP(PacketEnd, clientAddr)
-   fmt.Println("Terminado!")
-}
+
 func main()  {
 	addr := net.UDPAddr{
 		Port:9000,
@@ -201,7 +179,7 @@ func main()  {
 
    key := clientAddr.String()
 	 if client, exists := clients[key]; exists{
-		  pkt := DeserializePacket(buffer[:n])
+		pkt := DeserializePacket(buffer[:n])
 			if pkt.Flags&FlagACK != 0 && pkt.Seq == 0 {
 				client.AckCh <- pkt
 			} else {
@@ -228,7 +206,7 @@ func handleClient(client *Client)  {
 	go func ()  {
     defer func() {
         if r := recover(); r != nil {
-            fmt.Println("Recovered in client handler:", r)
+        fmt.Println("Recovered in client handler:", r)
         }
     }()
 		for data := range client.Ch{
