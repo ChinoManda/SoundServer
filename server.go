@@ -181,6 +181,7 @@ func main()  {
 	 if client, exists := clients[key]; exists{
 		 fmt.Println("Cliente existe")
 		pkt := DeserializePacket(buffer[:n])
+		fmt.Println(pkt)
 			if pkt.Flags&FlagACK != 0 && pkt.Seq == 0 {
 				client.AckCh <- pkt
 			} else {
