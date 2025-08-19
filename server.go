@@ -179,9 +179,7 @@ func main()  {
 
    key := clientAddr.String()
 	 if client, exists := clients[key]; exists{
-		 fmt.Println("Cliente existe")
 		pkt := DeserializePacket(buffer[:n])
-		fmt.Println(pkt)
 			if pkt.Flags&FlagACK != 0 && pkt.Seq == 0 {
 				client.AckCh <- pkt
 			} else {
@@ -213,7 +211,6 @@ func handleClient(client *Client)  {
     }()
 		for data := range client.Ch{
      Pkt := DeserializePacket(data)
-		 fmt.Println(Pkt)
     switch  {
     case Pkt.Flags&FlagCHOICE != 0 :
 		fmt.Println("FlagCHOICE")
