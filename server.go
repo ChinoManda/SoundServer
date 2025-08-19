@@ -211,6 +211,7 @@ func handleClient(client *Client)  {
     }()
 		for data := range client.Ch{
      Pkt := DeserializePacket(data)
+		 fmt.Println(Pkt)
     switch  {
     case Pkt.Flags&FlagCHOICE != 0 :
 		fmt.Println("FlagCHOICE")
@@ -218,7 +219,6 @@ func handleClient(client *Client)  {
 		sendSong(pcmData, client)
 	  case Pkt.Flags&FlagSYNC != 0 :
 			fmt.Println("FlagSYNC")
-			fmt.Println(Pkt)
 			success := handShake(client.Conn, Pkt, client.ClientAddr)	
 			fmt.Println(success)
   		 if success {
