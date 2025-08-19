@@ -140,7 +140,7 @@ func sendSong(pcmData []byte, client *Client)  {
             
 			}
 
-  		if ackReceived 
+  		if ackReceived { 
 			break
 			}
 	  }
